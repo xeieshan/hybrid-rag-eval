@@ -29,3 +29,27 @@ def test_split_sections_ignores_short_underlines():
     body = "A long heading line\n===\n\ntext"
     assert [h for h, _ in split_sections(body)] == ["Preamble"]
 
+
+def test_chunk_text_respects_budget_and_overlap():
+    paras = [" ".join(f"w{i}_{j}" for j in range(30)) for i in range(10)]
+    chunks = chunk_text("\n\n".join(paras), max_words=100, overlap_words=20)
+    assert len(chunks) > 1
+    for c in chunks:
+        assert len(c.split()) <= 100 + 20
+    # consecutive chunks share the overlap words
+    assert chunks[0].split()[-20:] == chunks[1].split()[:20]
+
+
+def test_long_paragraph_is_windowed():
+    text = " ".join(f"w{i}" for i in range(500))
+    chunks = chunk_text(text, max_words=200, overlap_words=50)
+    words = set()
+    for c in chunks:
+        words.update(c.split())
+    assert len(words) == 500
+
+
+def test_chunks_keep_section_and_header(corpus_dir):
+    doc = [d for d in load_corpus(corpus_dir) if d.number == 8][0]
+    chunks = chunk_document(doc, max_words=60, overlap_words=10)
+    assert {c.section for c in chunks} == {"Maximum Line Length", "Programming Recommendations"}
