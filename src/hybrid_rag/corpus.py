@@ -24,3 +24,22 @@ PEPS_REPO = "python/peps"
 PEPS_COMMIT = "545c670f1e986162eb7161d63c944108e504bd09"
 _PEP_FILE_RE = re.compile(r"^pep-(\d{4})\.rst$")
 
+
+@dataclass(frozen=True)
+class Document:
+    doc_id: str
+    number: int
+    title: str
+    body: str
+    metadata: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def status(self) -> str:
+        return self.metadata.get("Status", "")
+
+    @property
+    def python_version(self) -> str:
+        return self.metadata.get("Python-Version", "")
+
+
+def parse_header(text: str) -> tuple[dict[str, str], str]:
