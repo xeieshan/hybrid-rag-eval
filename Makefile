@@ -36,3 +36,11 @@ answers:
 ablation:
 	for mw in 120 400; do \
 		hybrid-rag build-index --corpus data/peps --out artifacts/index-lsa-$$mw --embedder lsa:256 --max-words $$mw --overlap $$((mw / 5)); \
+		hybrid-rag eval-retrieval --index lsa-$$mw=artifacts/index-lsa-$$mw --out results/chunk_size_$$mw.md; \
+	done
+
+serve:
+	hybrid-rag serve --index artifacts/index-lsa
+
+docker:
+	docker build -t hybrid-rag-eval .
