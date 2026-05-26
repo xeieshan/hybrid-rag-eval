@@ -43,3 +43,19 @@ class Document:
 
 
 def parse_header(text: str) -> tuple[dict[str, str], str]:
+    """Split a PEP into (header fields, body). Continuation lines are joined."""
+    lines = text.splitlines()
+    meta: dict[str, str] = {}
+    last_key: str | None = None
+    end = len(lines)
+    for idx, line in enumerate(lines):
+        if not line.strip():
+            end = idx
+            break
+        if line[:1] in (" ", "\t") and last_key is not None:
+            meta[last_key] = f"{meta[last_key]} {line.strip()}".strip()
+            continue
+        key, sep, value = line.partition(":")
+        if not sep:
+            # Not a header line: treat the whole file as body.
+            return {}, text
