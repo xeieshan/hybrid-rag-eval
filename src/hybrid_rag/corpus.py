@@ -59,3 +59,46 @@ def parse_header(text: str) -> tuple[dict[str, str], str]:
         if not sep:
             # Not a header line: treat the whole file as body.
             return {}, text
+        last_key = key.strip()
+        meta[last_key] = value.strip()
+    body = "\n".join(lines[end + 1 :]).strip("\n")
+    return meta, body
+
+
+def parse_pep(path: Path) -> Document:
+    match = _PEP_FILE_RE.match(path.name)
+    if not match:
+        raise ValueError(f"Not a PEP file name: {path.name}")
+    number = int(match.group(1))
+    meta, body = parse_header(path.read_text(encoding="utf-8"))
+    title = meta.get("Title", path.stem)
+    return Document(doc_id=f"pep-{number:04d}", number=number, title=title, body=body, metadata=meta)
+
+
+def load_corpus(directory: str | Path) -> list[Document]:
+    """Load every ``pep-NNNN.rst`` file in ``directory`` (searched recursively)."""
+    directory = Path(directory)
+    paths = sorted(p for p in directory.rglob("pep-*.rst") if _PEP_FILE_RE.match(p.name))
+    if not paths:
+        raise FileNotFoundError(f"No pep-NNNN.rst files found under {directory}")
+    return [parse_pep(p) for p in paths]
+
+
+def download_peps(dest: str | Path, commit: str = PEPS_COMMIT) -> Path:
+    """Download the PEP sources at ``commit`` and extract the .rst files into ``dest``."""
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    url = f"https://codeload.github.com/{PEPS_REPO}/tar.gz/{commit}"
+    with urllib.request.urlopen(url, timeout=120) as resp:  # noqa: S310 - fixed https URL
+        payload = resp.read()
+    count = 0
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as tar:
+        for member in tar.getmembers():
+            name = Path(member.name).name
+            if member.isfile() and _PEP_FILE_RE.match(name):
+                extracted = tar.extractfile(member)
+                if extracted is None:
+                    continue
+                (dest / name).write_bytes(extracted.read())
+                count += 1
+    if count == 0:
