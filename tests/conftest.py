@@ -66,3 +66,21 @@ def corpus_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
+def bundle(corpus_dir: Path) -> IndexBundle:
+    chunks = chunk_corpus(load_corpus(corpus_dir), max_words=60, overlap_words=10)
+    return IndexBundle.build(chunks, HashingEmbedder(256))
+
+
+class FakeMessage:
+    def __init__(self, content: str):
+        self.content = content
+
+
+class FakeChoice:
+    def __init__(self, content: str):
+        self.message = FakeMessage(content)
+
+
+class FakeUsage:
+    prompt_tokens = 10
+    completion_tokens = 5
