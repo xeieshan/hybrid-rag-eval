@@ -129,3 +129,13 @@ def chunk_document(doc: Document, max_words: int = 220, overlap_words: int = 40)
                     title=doc.title,
                     section=heading,
                     text=piece,
+                )
+            )
+    return chunks
+
+
+def chunk_corpus(docs: list[Document], max_words: int = 220, overlap_words: int = 40) -> list[Chunk]:
+    out: list[Chunk] = []
+    for doc in docs:
+        out.extend(chunk_document(doc, max_words=max_words, overlap_words=overlap_words))
+    return out
