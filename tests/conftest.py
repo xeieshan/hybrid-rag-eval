@@ -84,3 +84,27 @@ class FakeChoice:
 class FakeUsage:
     prompt_tokens = 10
     completion_tokens = 5
+
+
+class FakeResponse:
+    def __init__(self, content: str):
+        self.choices = [FakeChoice(content)]
+        self.usage = FakeUsage()
+
+
+@pytest.fixture()
+def fake_completion():
+    """Returns a factory: fake_completion(reply) -> completion_fn that always replies ``reply``."""
+
+    def factory(reply):
+        calls = []
+
+        def fn(**kwargs):
+            calls.append(kwargs)
+            content = reply(kwargs) if callable(reply) else reply
+            return FakeResponse(content)
+
+        fn.calls = calls
+        return fn
+
+    return factory
