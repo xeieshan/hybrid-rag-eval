@@ -30,3 +30,28 @@ def test_bm25_idf_matches_formula():
     n, df = 4, 2  # "length" appears in docs 1 and 3
     expected = math.log(1 + (n - df + 0.5) / (df + 0.5))
     assert idx.idf[idx.vocab["length"]] == pytest.approx(expected)
+
+
+def test_bm25_saturates_term_frequency():
+    idx = BM25Index().fit(DOCS)
+    s = idx.scores("length")
+    # doc 3 repeats the term 3x but BM25's tf saturation keeps the gap bounded
+    assert s[3] > s[1]
+    assert s[3] < 3 * s[1]
+
+
+def test_bm25_unknown_query_returns_nothing():
+    idx = BM25Index().fit(DOCS)
+    assert idx.search("kubernetes", k=3) == []
+    assert not idx.scores("").any()
+
+
+def test_rrf_rewards_agreement():
+    fused = reciprocal_rank_fusion([[1, 2, 3], [2, 1, 4]], k=60)
+    ids = [i for i, _ in fused]
+    assert ids[:2] == [1, 2] or ids[:2] == [2, 1]
+    assert set(ids) == {1, 2, 3, 4}
+    scores = dict(fused)
+    assert scores[1] == pytest.approx(1 / 61 + 1 / 62)
+    assert scores[3] < scores[2]
+
