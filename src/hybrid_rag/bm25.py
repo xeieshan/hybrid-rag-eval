@@ -27,3 +27,25 @@ STOPWORDS = frozenset(
 
 
 def tokenize(text: str) -> list[str]:
+    return [t for t in _TOKEN_RE.findall(text.lower()) if t not in STOPWORDS]
+
+
+class BM25Index:
+    def __init__(self, k1: float = 1.5, b: float = 0.75) -> None:
+        self.k1 = k1
+        self.b = b
+        self.vocab: dict[str, int] = {}
+        self.idf: np.ndarray = np.zeros(0)
+        self._weights: sparse.csc_matrix | None = None
+        self.n_docs = 0
+
+    def fit(self, texts: list[str]) -> BM25Index:
+        rows, cols, vals = [], [], []
+        doc_lens = np.zeros(len(texts), dtype=np.float64)
+        for i, text in enumerate(texts):
+            counts = Counter(tokenize(text))
+            doc_lens[i] = sum(counts.values())
+            for term, tf in counts.items():
+                j = self.vocab.setdefault(term, len(self.vocab))
+                rows.append(i)
+                cols.append(j)
