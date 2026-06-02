@@ -55,3 +55,19 @@ def test_rrf_rewards_agreement():
     assert scores[1] == pytest.approx(1 / 61 + 1 / 62)
     assert scores[3] < scores[2]
 
+
+def test_rrf_weights_length_mismatch():
+    with pytest.raises(ValueError):
+        reciprocal_rank_fusion([[1], [2]], weights=[1.0])
+
+
+@pytest.mark.parametrize("mode", ["bm25", "dense", "hybrid"])
+def test_retriever_modes_find_walrus(bundle, mode):
+    hits = Retriever(bundle, mode=mode).retrieve("walrus operator assignment expression", k=3)
+    assert hits[0].chunk.number == 572
+    assert [h.rank for h in hits] == list(range(1, len(hits) + 1))
+
+
+def test_index_roundtrip(bundle, tmp_path):
+    bundle.save(tmp_path / "idx")
+    loaded = IndexBundle.load(tmp_path / "idx")
