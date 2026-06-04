@@ -102,3 +102,6 @@ def download_peps(dest: str | Path, commit: str = PEPS_COMMIT) -> Path:
                 (dest / name).write_bytes(extracted.read())
                 count += 1
     if count == 0:
+        raise RuntimeError(f"No PEP files found in archive from {url}")
+    (dest / "COMMIT").write_text(commit + "\n", encoding="utf-8")
+    return dest
