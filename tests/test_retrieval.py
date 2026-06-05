@@ -71,3 +71,14 @@ def test_retriever_modes_find_walrus(bundle, mode):
 def test_index_roundtrip(bundle, tmp_path):
     bundle.save(tmp_path / "idx")
     loaded = IndexBundle.load(tmp_path / "idx")
+    assert [c.chunk_id for c in loaded.chunks] == [c.chunk_id for c in bundle.chunks]
+    np.testing.assert_allclose(loaded.dense.vectors, bundle.dense.vectors)
+    q = "maximum line length"
+    assert [h.chunk.chunk_id for h in Retriever(loaded).retrieve(q, 3)] == [
+        h.chunk.chunk_id for h in Retriever(bundle).retrieve(q, 3)
+    ]
+
+
+def test_unknown_mode_rejected(bundle):
+    with pytest.raises(ValueError):
+        Retriever(bundle, mode="magic")
