@@ -49,3 +49,31 @@ class BM25Index:
                 j = self.vocab.setdefault(term, len(self.vocab))
                 rows.append(i)
                 cols.append(j)
+                vals.append(tf)
+        self.n_docs = len(texts)
+        tf = sparse.csr_matrix(
+            (np.asarray(vals, dtype=np.float64), (rows, cols)),
+            shape=(self.n_docs, len(self.vocab)),
+        )
+        df = np.bincount(tf.indices, minlength=len(self.vocab)).astype(np.float64)
+        self.idf = np.log1p((self.n_docs - df + 0.5) / (df + 0.5))
+
+        avgdl = doc_lens.mean() if self.n_docs else 0.0
+        norm = self.k1 * (1.0 - self.b + self.b * doc_lens / max(avgdl, 1e-9))
+        # Precompute the per-(doc, term) BM25 weight so queries are a sparse column sum.
+        tf = tf.tocoo()
+        weights = tf.data * (self.k1 + 1.0) / (tf.data + norm[tf.row]) * self.idf[tf.col]
+        self._weights = sparse.csc_matrix((weights, (tf.row, tf.col)), shape=tf.shape)
+        return self
+
+    def scores(self, query: str) -> np.ndarray:
+        if self._weights is None:
+            raise RuntimeError("Index is not fitted")
+        term_ids = sorted({self.vocab[t] for t in tokenize(query) if t in self.vocab})
+        if not term_ids:
+            return np.zeros(self.n_docs)
+        return np.asarray(self._weights[:, term_ids].sum(axis=1)).ravel()
+
+    def search(self, query: str, k: int = 10) -> list[tuple[int, float]]:
+        s = self.scores(query)
+        if not s.any():
