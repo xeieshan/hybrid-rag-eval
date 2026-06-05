@@ -39,3 +39,23 @@ class DenseIndex:
     def __init__(self, vectors: np.ndarray) -> None:
         self.vectors = np.asarray(vectors, dtype=np.float32)
 
+    def search(self, query_vec: np.ndarray, k: int = 10) -> list[tuple[int, float]]:
+        sims = self.vectors @ np.asarray(query_vec, dtype=np.float32).ravel()
+        k = min(k, len(sims))
+        top = np.argpartition(-sims, k - 1)[:k]
+        top = top[np.argsort(-sims[top], kind="stable")]
+        return [(int(i), float(sims[i])) for i in top]
+
+
+class IndexBundle:
+    """Chunks + BM25 + dense vectors + the embedder used to make them."""
+
+    def __init__(self, chunks: list[Chunk], bm25: BM25Index, dense: DenseIndex, embedder: Embedder):
+        self.chunks = chunks
+        self.bm25 = bm25
+        self.dense = dense
+        self.embedder = embedder
+
+    @classmethod
+    def build(cls, chunks: list[Chunk], embedder: Embedder) -> IndexBundle:
+        texts = [c.indexed_text for c in chunks]
