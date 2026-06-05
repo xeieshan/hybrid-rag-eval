@@ -132,3 +132,12 @@ def make_embedder(spec: str, cache_dir: str | Path | None = None) -> Embedder:
         return LiteLLMEmbedder(model=arg, cache_dir=cache_dir)
     raise ValueError(f"Unknown embedder spec: {spec!r}")
 
+
+def save_embedder(embedder: Embedder, path: Path) -> None:
+    with path.open("wb") as f:
+        pickle.dump(embedder, f)
+
+
+def load_embedder(path: Path) -> Embedder:
+    with path.open("rb") as f:
+        return pickle.load(f)  # noqa: S301 - local artifact written by build-index
