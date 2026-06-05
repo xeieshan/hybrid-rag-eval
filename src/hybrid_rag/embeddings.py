@@ -83,3 +83,27 @@ class LiteLLMEmbedder:
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             self._cache_file = self.cache_dir / f"{hashlib.sha256(model.encode()).hexdigest()[:12]}.jsonl"
+            if self._cache_file.exists():
+                for line in self._cache_file.read_text(encoding="utf-8").splitlines():
+                    rec = json.loads(line)
+                    self._cache[rec["key"]] = rec["vec"]
+
+    def fit(self, texts: list[str]) -> LiteLLMEmbedder:
+        return self
+
+    @staticmethod
+    def _key(text: str) -> str:
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def embed(self, texts: list[str]) -> np.ndarray:
+        import litellm
+
+        keys = [self._key(t) for t in texts]
+        missing = [i for i, k in enumerate(keys) if k not in self._cache]
+        for start in range(0, len(missing), self.batch_size):
+            idx = missing[start : start + self.batch_size]
+            resp = litellm.embedding(model=self.model, input=[texts[i] for i in idx])
+            rows = sorted(resp.data, key=lambda d: _field(d, "index"))
+            new = {keys[i]: _field(row, "embedding") for i, row in zip(idx, rows, strict=True)}
+            self._cache.update(new)
+            if self.cache_dir:
