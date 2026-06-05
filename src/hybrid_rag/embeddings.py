@@ -107,3 +107,28 @@ class LiteLLMEmbedder:
             new = {keys[i]: _field(row, "embedding") for i, row in zip(idx, rows, strict=True)}
             self._cache.update(new)
             if self.cache_dir:
+                with self._cache_file.open("a", encoding="utf-8") as f:
+                    for k, v in new.items():
+                        f.write(json.dumps({"key": k, "vec": v}) + "\n")
+        return _normalize(np.array([self._cache[k] for k in keys]))
+
+    def __getstate__(self) -> dict:
+        # Don't pickle the in-memory cache; it lives in cache_dir.
+        state = self.__dict__.copy()
+        state["_cache"] = {}
+        return state
+
+
+def make_embedder(spec: str, cache_dir: str | Path | None = None) -> Embedder:
+    """``lsa`` | ``lsa:<dims>`` | ``hashing`` | ``litellm:<model>``."""
+    kind, _, arg = spec.partition(":")
+    if kind == "lsa":
+        return LSAEmbedder(n_components=int(arg) if arg else 256)
+    if kind == "hashing":
+        return HashingEmbedder(n_features=int(arg) if arg else 512)
+    if kind == "litellm":
+        if not arg:
+            raise ValueError("litellm embedder needs a model, e.g. litellm:text-embedding-3-small")
+        return LiteLLMEmbedder(model=arg, cache_dir=cache_dir)
+    raise ValueError(f"Unknown embedder spec: {spec!r}")
+
