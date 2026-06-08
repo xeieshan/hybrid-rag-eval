@@ -59,3 +59,29 @@ class IndexBundle:
     @classmethod
     def build(cls, chunks: list[Chunk], embedder: Embedder) -> IndexBundle:
         texts = [c.indexed_text for c in chunks]
+        bm25 = BM25Index().fit(texts)
+        embedder.fit(texts)
+        dense = DenseIndex(embedder.embed(texts))
+        return cls(chunks, bm25, dense, embedder)
+
+    def save(self, directory: str | Path) -> None:
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        with (directory / "chunks.jsonl").open("w", encoding="utf-8") as f:
+            for c in self.chunks:
+                f.write(json.dumps(c.to_dict()) + "\n")
+        with (directory / "bm25.pkl").open("wb") as f:
+            pickle.dump(self.bm25, f)
+        np.save(directory / "dense.npy", self.dense.vectors)
+        save_embedder(self.embedder, directory / "embedder.pkl")
+        meta = {"n_chunks": len(self.chunks), "embedder": self.embedder.name}
+        (directory / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    @classmethod
+    def load(cls, directory: str | Path) -> IndexBundle:
+        directory = Path(directory)
+        with (directory / "chunks.jsonl").open(encoding="utf-8") as f:
+            chunks = [Chunk.from_dict(json.loads(line)) for line in f]
+        with (directory / "bm25.pkl").open("rb") as f:
+            bm25 = pickle.load(f)  # noqa: S301 - local artifact written by build-index
+        dense = DenseIndex(np.load(directory / "dense.npy"))
