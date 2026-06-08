@@ -85,3 +85,35 @@ class IndexBundle:
         with (directory / "bm25.pkl").open("rb") as f:
             bm25 = pickle.load(f)  # noqa: S301 - local artifact written by build-index
         dense = DenseIndex(np.load(directory / "dense.npy"))
+        return cls(chunks, bm25, dense, load_embedder(directory / "embedder.pkl"))
+
+
+class Retriever:
+    """``mode`` is ``bm25``, ``dense`` or ``hybrid`` (RRF over both)."""
+
+    def __init__(self, index: IndexBundle, mode: str = "hybrid", rrf_k: int = 60, candidates: int = 50):
+        if mode not in {"bm25", "dense", "hybrid"}:
+            raise ValueError(f"Unknown retrieval mode: {mode}")
+        self.index = index
+        self.mode = mode
+        self.rrf_k = rrf_k
+        self.candidates = candidates
+
+    def _bm25_ids(self, query: str, k: int) -> list[tuple[int, float]]:
+        return self.index.bm25.search(query, k)
+
+    def _dense_ids(self, query: str, k: int) -> list[tuple[int, float]]:
+        qvec = self.index.embedder.embed([query])[0]
+        return self.index.dense.search(qvec, k)
+
+    def retrieve(self, query: str, k: int = 10) -> list[Hit]:
+        if self.mode == "bm25":
+            ranked = self._bm25_ids(query, k)
+        elif self.mode == "dense":
+            ranked = self._dense_ids(query, k)
+        else:
+            n = max(k, self.candidates)
+            lexical = [i for i, _ in self._bm25_ids(query, n)]
+            semantic = [i for i, _ in self._dense_ids(query, n)]
+            ranked = reciprocal_rank_fusion([lexical, semantic], k=self.rrf_k)[:k]
+        return [Hit(chunk=self.index.chunks[i], score=score, rank=r) for r, (i, score) in enumerate(ranked, start=1)]
