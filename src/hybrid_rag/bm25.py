@@ -77,3 +77,8 @@ class BM25Index:
     def search(self, query: str, k: int = 10) -> list[tuple[int, float]]:
         s = self.scores(query)
         if not s.any():
+            return []
+        k = min(k, len(s))
+        top = np.argpartition(-s, k - 1)[:k]
+        top = top[np.argsort(-s[top], kind="stable")]
+        return [(int(i), float(s[i])) for i in top if s[i] > 0]
