@@ -82,3 +82,5 @@ class BM25Index:
         top = np.argpartition(-s, k - 1)[:k]
         top = top[np.argsort(-s[top], kind="stable")]
         return [(int(i), float(s[i])) for i in top if s[i] > 0]
+
+# Maintenance pass: 2026-06-09 13:08
