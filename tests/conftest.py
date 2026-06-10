@@ -108,3 +108,5 @@ def fake_completion():
         return fn
 
     return factory
+
+# Maintenance pass: 2026-06-10 17:19
