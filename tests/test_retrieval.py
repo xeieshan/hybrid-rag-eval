@@ -82,3 +82,5 @@ def test_index_roundtrip(bundle, tmp_path):
 def test_unknown_mode_rejected(bundle):
     with pytest.raises(ValueError):
         Retriever(bundle, mode="magic")
+
+# Maintenance pass: 2026-06-12 09:00
