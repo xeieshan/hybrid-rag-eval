@@ -142,4 +142,4 @@ def load_embedder(path: Path) -> Embedder:
     with path.open("rb") as f:
         return pickle.load(f)  # noqa: S301 - local artifact written by build-index
 
-# Maintenance pass: 2026-06-15 14:37
+# Maintenance pass: 2026-06-17 09:57
