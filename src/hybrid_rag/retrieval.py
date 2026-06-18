@@ -117,3 +117,5 @@ class Retriever:
             semantic = [i for i, _ in self._dense_ids(query, n)]
             ranked = reciprocal_rank_fusion([lexical, semantic], k=self.rrf_k)[:k]
         return [Hit(chunk=self.index.chunks[i], score=score, rank=r) for r, (i, score) in enumerate(ranked, start=1)]
+
+# Maintenance pass: 2026-06-18 17:56
