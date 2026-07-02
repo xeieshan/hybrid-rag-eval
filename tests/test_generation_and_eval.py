@@ -34,3 +34,21 @@ def test_answer_question_uses_completion(bundle, fake_completion):
     ans = answer_question("What is :=?", hits, model="test-model", completion_fn=fn)
     assert ans.cited_peps == [572]
     assert ans.found
+    assert fn.calls[0]["model"] == "test-model"
+    assert fn.calls[0]["temperature"] == 0.0
+
+
+def test_not_found_answer(bundle, fake_completion):
+    ans = answer_question("Q", [], "m", completion_fn=fake_completion(NOT_FOUND))
+    assert not ans.found
+
+
+def test_rerank_reorders_by_scores(bundle, fake_completion):
+    hits = Retriever(bundle).retrieve("python", k=3)
+    reply = json.dumps({"scores": [0, 3, 1]})
+    out = rerank("q", hits, "m", completion_fn=fake_completion(reply))
+    assert len(hits) == 3
+    expected = [hits[1].chunk.chunk_id, hits[2].chunk.chunk_id, hits[0].chunk.chunk_id]
+    assert [h.chunk.chunk_id for h in out] == expected
+
+
