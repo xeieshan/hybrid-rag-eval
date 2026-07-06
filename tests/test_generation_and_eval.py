@@ -52,3 +52,35 @@ def test_rerank_reorders_by_scores(bundle, fake_completion):
     assert [h.chunk.chunk_id for h in out] == expected
 
 
+def test_rerank_falls_back_on_bad_json(bundle, fake_completion):
+    hits = Retriever(bundle).retrieve("python", k=3)
+    out = rerank("q", hits, "m", completion_fn=fake_completion("not json"))
+    assert out == hits
+    out = rerank("q", hits, "m", completion_fn=fake_completion('{"scores": ["x", "y", "z"]}'))
+    assert out == hits
+
+
+def test_metric_functions():
+    ranking = [20, 8, 572]
+    assert hit_at_k(ranking, [8], 1) == 0.0
+    assert hit_at_k(ranking, [8], 2) == 1.0
+    assert recall_at_k(ranking, [8, 572], 2) == 0.5
+    assert reciprocal_rank(ranking, [572]) == 1 / 3
+    assert reciprocal_rank(ranking, [1]) == 0.0
+
+
+def test_doc_ranking_dedupes(bundle):
+    hits = Retriever(bundle, mode="bm25").retrieve("python", k=10)
+    ranking = doc_ranking(hits)
+    assert len(ranking) == len(set(ranking))
+
+
+def test_evaluate_retrieval_end_to_end(bundle):
+    qs = [
+        Question("a", "walrus operator assignment expression", (572,), "ref"),
+        Question("b", "maximum line length characters", (8,), "ref"),
+    ]
+    res = evaluate_retrieval(Retriever(bundle, mode="bm25"), qs, ks=(1, 3))
+    assert res["summary"]["hit@1"] == 1.0
+    assert res["summary"]["mrr"] == 1.0
+    table = retrieval_table({"BM25": res}, ks=(1, 3))
