@@ -91,3 +91,43 @@ def retrieval_table(results: dict[str, dict], ks: tuple[int, ...] = (1, 3, 5, 10
         s = res["summary"]
         cells = " | ".join(f"{s[f'hit@{k}']:.3f}" for k in ks)
         rows.append(f"| {name} | {cells} | {s['mrr']:.3f} |")
+    return "\n".join(rows)
+
+
+JUDGE_PROMPT = """You grade answers about Python PEPs.
+Question: {question}
+Reference answer: {reference}
+Candidate answer: {answer}
+
+Is the candidate factually consistent with the reference and does it answer the question?
+Extra correct detail is fine; contradictions or missing the core point are not.
+Return only JSON: {{"correct": true|false, "reason": "<one sentence>"}}"""
+
+
+def judge(question: Question, answer_text: str, model: str, completion_fn: CompletionFn | None = None):
+    prompt = JUDGE_PROMPT.format(question=question.question, reference=question.reference, answer=answer_text)
+    result = complete(
+        model,
+        [{"role": "user", "content": prompt}],
+        completion_fn=completion_fn,
+        max_tokens=150,
+    )
+    match = re.search(r"\{.*\}", result.text, re.DOTALL)
+    try:
+        verdict = json.loads(match.group(0)) if match else {}
+    except json.JSONDecodeError:
+        verdict = {}
+    return bool(verdict.get("correct", False)), str(verdict.get("reason", "unparseable judge output")), result
+
+
+def evaluate_answers(
+    retriever: Retriever,
+    questions: list[Question],
+    model: str,
+    judge_model: str | None = None,
+    k: int = 6,
+    use_rerank: bool = False,
+    completion_fn: CompletionFn | None = None,
+) -> dict:
+    judge_model = judge_model or model
+    meter = UsageMeter()
