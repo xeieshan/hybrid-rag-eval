@@ -139,3 +139,5 @@ def chunk_corpus(docs: list[Document], max_words: int = 220, overlap_words: int 
     for doc in docs:
         out.extend(chunk_document(doc, max_words=max_words, overlap_words=overlap_words))
     return out
+
+# Maintenance pass: 2026-07-08 15:21
