@@ -57,3 +57,21 @@ def complete(
     last_err: Exception | None = None
     for attempt in range(retries + 1):
         try:
+            start = time.perf_counter()
+            resp = fn(model=model, messages=messages, temperature=temperature, max_tokens=max_tokens, **kwargs)
+            latency = time.perf_counter() - start
+            break
+        except Exception as err:  # noqa: BLE001 - provider errors vary by backend
+            last_err = err
+            if attempt == retries:
+                raise
+            time.sleep(2**attempt)
+    else:  # pragma: no cover
+        raise RuntimeError("unreachable") from last_err
+
+    text = resp.choices[0].message.content or ""
+    usage = getattr(resp, "usage", None)
+    cost = 0.0
+    try:
+        import litellm
+
