@@ -75,3 +75,13 @@ def complete(
     try:
         import litellm
 
+        cost = float(litellm.completion_cost(completion_response=resp) or 0.0)
+    except Exception:  # noqa: BLE001 - unknown/local models have no price table
+        cost = 0.0
+    return LLMResult(
+        text=text,
+        prompt_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
+        completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
+        cost_usd=cost,
+        latency_s=latency,
+    )
