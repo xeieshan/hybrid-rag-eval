@@ -106,4 +106,4 @@ def download_peps(dest: str | Path, commit: str = PEPS_COMMIT) -> Path:
     (dest / "COMMIT").write_text(commit + "\n", encoding="utf-8")
     return dest
 
-# Maintenance pass: 2026-06-23 17:25
+# Maintenance pass: 2026-07-09 15:34
