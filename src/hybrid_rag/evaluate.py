@@ -131,3 +131,37 @@ def evaluate_answers(
 ) -> dict:
     judge_model = judge_model or model
     meter = UsageMeter()
+    per_q = []
+    for q in questions:
+        hits = retriever.retrieve(q.question, k=20 if use_rerank else k)
+        if use_rerank:
+            hits = rerank(q.question, hits, model, completion_fn=completion_fn)[:k]
+        ans = answer_question(q.question, hits, model, completion_fn=completion_fn)
+        if ans.llm:
+            meter.add(ans.llm)
+        correct, reason, jres = judge(q, ans.text, judge_model, completion_fn=completion_fn)
+        meter.add(jres)
+        shown = {h.chunk.number for h in hits}
+        per_q.append(
+            {
+                "id": q.qid,
+                "answer": ans.text,
+                "cited": ans.cited_peps,
+                "correct": correct,
+                "judge_reason": reason,
+                "cites_gold": bool(set(ans.cited_peps) & set(q.gold_peps)),
+                "citations_grounded": set(ans.cited_peps) <= shown and bool(ans.cited_peps),
+                "latency_s": ans.llm.latency_s if ans.llm else 0.0,
+            }
+        )
+    n = len(per_q)
+    summary = {
+        "n": n,
+        "accuracy": sum(r["correct"] for r in per_q) / n,
+        "cites_gold": sum(r["cites_gold"] for r in per_q) / n,
+        "citations_grounded": sum(r["citations_grounded"] for r in per_q) / n,
+        "mean_latency_s": sum(r["latency_s"] for r in per_q) / n,
+        "llm_calls": meter.calls,
+        "total_cost_usd": round(meter.cost_usd, 4),
+    }
+    return {"summary": summary, "per_question": per_q}
