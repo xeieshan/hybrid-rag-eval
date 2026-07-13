@@ -84,3 +84,27 @@ def test_evaluate_retrieval_end_to_end(bundle):
     assert res["summary"]["hit@1"] == 1.0
     assert res["summary"]["mrr"] == 1.0
     table = retrieval_table({"BM25": res}, ks=(1, 3))
+    assert "| BM25 | 1.000 | 1.000 | 1.000 |" in table
+
+
+def test_evaluate_answers_with_fake_llm(bundle, fake_completion):
+    def reply(kwargs):
+        content = kwargs["messages"][-1]["content"]
+        if "Candidate answer" in content:
+            return '{"correct": true, "reason": "matches"}'
+        return "Use := [PEP 572]."
+
+    qs = [Question("a", "walrus operator", (572,), "The := operator.")]
+    res = evaluate_answers(Retriever(bundle), qs, model="m", completion_fn=fake_completion(reply))
+    s = res["summary"]
+    assert s["accuracy"] == 1.0
+    assert s["cites_gold"] == 1.0
+    assert s["citations_grounded"] == 1.0
+    assert s["llm_calls"] == 2
+
+
+def test_shipped_eval_set_is_well_formed():
+    qs = load_questions("data/eval/questions.jsonl")
+    assert len(qs) >= 40
+    assert len({q.qid for q in qs}) == len(qs)
+    assert all(q.gold_peps and q.reference for q in qs)
