@@ -47,3 +47,23 @@ def build_messages(question: str, hits: list[Hit]) -> list[dict[str, str]]:
     user = f"PEP excerpts:\n\n{format_context(hits)}\n\nQuestion: {question}"
     return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}]
 
+
+def parse_citations(text: str) -> list[int]:
+    seen: list[int] = []
+    for m in _CITATION_RE.finditer(text):
+        n = int(m.group(1))
+        if n not in seen:
+            seen.append(n)
+    return seen
+
+
+def answer_question(question: str, hits: list[Hit], model: str, completion_fn: CompletionFn | None = None) -> Answer:
+    result = complete(model, build_messages(question, hits), completion_fn=completion_fn)
+    return Answer(
+        question=question,
+        text=result.text.strip(),
+        cited_peps=parse_citations(result.text),
+        sources=hits,
+        llm=result,
+    )
+
