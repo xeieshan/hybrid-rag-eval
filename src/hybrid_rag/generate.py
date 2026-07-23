@@ -67,3 +67,22 @@ def answer_question(question: str, hits: list[Hit], model: str, completion_fn: C
         llm=result,
     )
 
+
+RERANK_PROMPT = """Rate how well each passage answers the query.
+0 = irrelevant, 1 = related topic, 2 = partially answers, 3 = directly answers.
+Return only JSON: {{"scores": [<one integer per passage, in order>]}}
+
+Query: {query}
+
+{passages}"""
+
+
+def rerank(query: str, hits: list[Hit], model: str, completion_fn: CompletionFn | None = None) -> list[Hit]:
+    """Listwise LLM reranking. Falls back to the original order if the reply can't be parsed."""
+    if len(hits) <= 1:
+        return hits
+    passages = "\n\n".join(
+        f"Passage {i}: PEP {h.chunk.number} ({h.chunk.section})\n{' '.join(h.chunk.text.split()[:120])}"
+        for i, h in enumerate(hits, start=1)
+    )
+    result = complete(
