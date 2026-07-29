@@ -40,4 +40,4 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP", "S", "BLE"]
 ignore = ["S101"]
 
-# Maintenance pass: 2026-07-06 17:27
+# Maintenance pass: 2026-07-29 16:27
