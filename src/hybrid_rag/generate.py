@@ -86,3 +86,21 @@ def rerank(query: str, hits: list[Hit], model: str, completion_fn: CompletionFn 
         for i, h in enumerate(hits, start=1)
     )
     result = complete(
+        model,
+        [{"role": "user", "content": RERANK_PROMPT.format(query=query, passages=passages)}],
+        completion_fn=completion_fn,
+        max_tokens=200,
+    )
+    match = re.search(r"\{.*\}", result.text, re.DOTALL)
+    try:
+        scores = json.loads(match.group(0))["scores"] if match else None
+    except (json.JSONDecodeError, KeyError, TypeError):
+        scores = None
+    if not isinstance(scores, list) or len(scores) != len(hits):
+        return hits
+    try:
+        values = [float(s) for s in scores]
+    except (TypeError, ValueError):
+        return hits
+    order = sorted(range(len(hits)), key=lambda i: (-values[i], i))
+    return [Hit(chunk=hits[i].chunk, score=values[i], rank=r) for r, i in enumerate(order, start=1)]
