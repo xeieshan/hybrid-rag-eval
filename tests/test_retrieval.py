@@ -83,4 +83,4 @@ def test_unknown_mode_rejected(bundle):
     with pytest.raises(ValueError):
         Retriever(bundle, mode="magic")
 
-# Maintenance pass: 2026-07-29 11:27
+# Maintenance pass: 2026-07-31 13:56
