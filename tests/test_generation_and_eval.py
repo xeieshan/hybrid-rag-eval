@@ -109,4 +109,4 @@ def test_shipped_eval_set_is_well_formed():
     assert len({q.qid for q in qs}) == len(qs)
     assert all(q.gold_peps and q.reference for q in qs)
 
-# Maintenance pass: 2026-07-29 18:51
+# Maintenance pass: 2026-08-06 17:21
