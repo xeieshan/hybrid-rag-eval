@@ -6,3 +6,5 @@ Produced with `make ablation`. One question is worth 0.022, so gaps under ~0.05 
 | Chunk size (words) | Retriever | Hit@1 | Hit@5 | Hit@10 | MRR |
 |---:|---|---:|---:|---:|---:|
 | 120 | BM25 | 0.489 | 0.756 | 0.844 | 0.633 |
+| 120 | Hybrid RRF (BM25 + LSA) | 0.511 | 0.800 | 0.867 | 0.644 |
+| 220 | BM25 | 0.556 | 0.844 | 0.889 | 0.677 |
