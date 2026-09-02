@@ -51,3 +51,75 @@ def cmd_ask(args: argparse.Namespace) -> None:
     print("\nSources: " + ", ".join(f"PEP {h.chunk.number} ({h.chunk.section})" for h in hits))
 
 
+def _parse_named(values: list[str]) -> dict[str, str]:
+    out = {}
+    for v in values:
+        name, sep, path = v.partition("=")
+        out[name if sep else Path(v).name] = path if sep else v
+    return out
+
+
+def cmd_eval_retrieval(args: argparse.Namespace) -> None:
+    questions = load_questions(args.questions)
+    results: dict[str, dict] = {}
+    bm25_done = False
+    for name, path in _parse_named(args.index).items():
+        bundle = IndexBundle.load(path)
+        if not bm25_done:
+            results["BM25"] = evaluate_retrieval(Retriever(bundle, mode="bm25"), questions)
+            bm25_done = True
+        results[f"Dense ({name})"] = evaluate_retrieval(Retriever(bundle, mode="dense"), questions)
+        results[f"Hybrid RRF (BM25 + {name})"] = evaluate_retrieval(Retriever(bundle, mode="hybrid"), questions)
+    table = retrieval_table(results)
+    print(table)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(f"Questions: {len(questions)} ({args.questions})\n\n{table}\n", encoding="utf-8")
+        out.with_suffix(".json").write_text(json.dumps(results, indent=2), encoding="utf-8")
+        print(f"\nWrote {out} and {out.with_suffix('.json')}")
+
+
+def cmd_eval_answers(args: argparse.Namespace) -> None:
+    questions = load_questions(args.questions)[: args.limit or None]
+    retriever = Retriever(IndexBundle.load(args.index), mode="hybrid")
+    res = evaluate_answers(
+        retriever, questions, model=args.model, judge_model=args.judge_model, k=args.k, use_rerank=args.rerank
+    )
+    print(json.dumps(res["summary"], indent=2))
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(json.dumps(res, indent=2), encoding="utf-8")
+        print(f"Wrote {args.out}")
+
+
+def cmd_serve(args: argparse.Namespace) -> None:
+    import os
+
+    import uvicorn
+
+    os.environ["RAG_INDEX_DIR"] = args.index
+    uvicorn.run("hybrid_rag.api:app", host=args.host, port=args.port)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="hybrid-rag", description=__doc__)
+    sub = p.add_subparsers(dest="command", required=True)
+
+    s = sub.add_parser("download", help="download the pinned PEP corpus")
+    s.add_argument("--dest", default="data/peps")
+    s.set_defaults(func=cmd_download)
+
+    s = sub.add_parser("build-index", help="chunk the corpus and build BM25 + dense indexes")
+    s.add_argument("--corpus", default="data/peps")
+    s.add_argument("--out", default="artifacts/index")
+    s.add_argument("--embedder", default="lsa:256", help="lsa[:dims] | litellm:<model> | hashing")
+    s.add_argument("--max-words", type=int, default=220)
+    s.add_argument("--overlap", type=int, default=40)
+    s.set_defaults(func=cmd_build_index)
+
+    s = sub.add_parser("search", help="retrieve chunks for a query")
+    s.add_argument("query")
+    s.add_argument("--index", default="artifacts/index")
+    s.add_argument("--mode", choices=["bm25", "dense", "hybrid"], default="hybrid")
+    s.add_argument("--k", type=int, default=5)
