@@ -8,3 +8,14 @@ def test_health_search_and_ask(bundle, fake_completion):
     with TestClient(create_app(bundle=bundle, model="m", completion_fn=fn)) as client:
         assert client.get("/health").json()["chunks"] == len(bundle.chunks)
 
+        r = client.post("/search", json={"query": "line length", "k": 2, "mode": "bm25"})
+        assert r.status_code == 200
+        assert r.json()["results"][0]["pep"] == 8
+
+        r = client.post("/ask", json={"question": "How long can a line be?"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["cited_peps"] == [8]
+        assert body["sources"]
+
+
