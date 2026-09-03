@@ -24,3 +24,21 @@ class SearchRequest(BaseModel):
     k: int = Field(default=5, ge=1, le=50)
     mode: Literal["bm25", "dense", "hybrid"] = "hybrid"
 
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    k: int = Field(default=6, ge=1, le=20)
+    rerank: bool = False
+
+
+class Source(BaseModel):
+    pep: int
+    title: str
+    section: str
+    score: float
+    text: str
+
+
+class SearchResponse(BaseModel):
+    results: list[Source]
+
