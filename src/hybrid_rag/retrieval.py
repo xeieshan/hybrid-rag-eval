@@ -118,4 +118,4 @@ class Retriever:
             ranked = reciprocal_rank_fusion([lexical, semantic], k=self.rrf_k)[:k]
         return [Hit(chunk=self.index.chunks[i], score=score, rank=r) for r, (i, score) in enumerate(ranked, start=1)]
 
-# Maintenance pass: 2026-08-11 11:19
+# Maintenance pass: 2026-09-03 15:24
