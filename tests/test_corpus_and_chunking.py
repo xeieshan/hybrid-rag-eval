@@ -53,3 +53,5 @@ def test_chunks_keep_section_and_header(corpus_dir):
     doc = [d for d in load_corpus(corpus_dir) if d.number == 8][0]
     chunks = chunk_document(doc, max_words=60, overlap_words=10)
     assert {c.section for c in chunks} == {"Maximum Line Length", "Programming Recommendations"}
+    assert chunks[0].indexed_text.startswith("PEP 8: Style Guide for Python Code\nSection: Maximum Line Length")
+    assert chunks[0].chunk_id == "pep-0008#000"
