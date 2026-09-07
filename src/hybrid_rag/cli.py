@@ -123,3 +123,46 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--index", default="artifacts/index")
     s.add_argument("--mode", choices=["bm25", "dense", "hybrid"], default="hybrid")
     s.add_argument("--k", type=int, default=5)
+    s.set_defaults(func=cmd_search)
+
+    s = sub.add_parser("ask", help="answer a question with citations")
+    s.add_argument("question")
+    s.add_argument("--index", default="artifacts/index")
+    s.add_argument("--model", default="gpt-4o-mini")
+    s.add_argument("--k", type=int, default=6)
+    s.add_argument("--rerank", action="store_true")
+    s.set_defaults(func=cmd_ask)
+
+    s = sub.add_parser("eval-retrieval", help="hit@k / MRR for BM25, dense and hybrid")
+    s.add_argument("--index", action="append", required=True, help="name=path, repeatable")
+    s.add_argument("--questions", default=DEFAULT_QUESTIONS)
+    s.add_argument("--out", default="results/retrieval.md")
+    s.set_defaults(func=cmd_eval_retrieval)
+
+    s = sub.add_parser("eval-answers", help="end-to-end answer accuracy with an LLM judge")
+    s.add_argument("--index", default="artifacts/index")
+    s.add_argument("--questions", default=DEFAULT_QUESTIONS)
+    s.add_argument("--model", default="gpt-4o-mini")
+    s.add_argument("--judge-model", default=None)
+    s.add_argument("--k", type=int, default=6)
+    s.add_argument("--rerank", action="store_true")
+    s.add_argument("--limit", type=int, default=0)
+    s.add_argument("--out", default="results/answers.json")
+    s.set_defaults(func=cmd_eval_answers)
+
+    s = sub.add_parser("serve", help="run the HTTP API")
+    s.add_argument("--index", default="artifacts/index")
+    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--port", type=int, default=8000)
+    s.set_defaults(func=cmd_serve)
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    args.func(args)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
