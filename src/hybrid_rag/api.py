@@ -42,3 +42,24 @@ class Source(BaseModel):
 class SearchResponse(BaseModel):
     results: list[Source]
 
+
+class AskResponse(BaseModel):
+    answer: str
+    cited_peps: list[int]
+    sources: list[Source]
+
+
+def _source(hit) -> Source:
+    c = hit.chunk
+    return Source(pep=c.number, title=c.title, section=c.section, score=hit.score, text=c.text)
+
+
+def create_app(
+    bundle: IndexBundle | None = None, model: str | None = None, completion_fn: CompletionFn | None = None
+) -> FastAPI:
+    state: dict = {"bundle": bundle, "model": model or os.getenv("RAG_LLM_MODEL", "gpt-4o-mini")}
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        if state["bundle"] is None:
+            state["bundle"] = IndexBundle.load(os.getenv("RAG_INDEX_DIR", "artifacts/index"))
