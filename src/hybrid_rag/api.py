@@ -63,3 +63,25 @@ def create_app(
     async def lifespan(_: FastAPI):
         if state["bundle"] is None:
             state["bundle"] = IndexBundle.load(os.getenv("RAG_INDEX_DIR", "artifacts/index"))
+        yield
+
+    app = FastAPI(title="hybrid-rag-eval", version="0.1.0", lifespan=lifespan)
+
+    @app.get("/health")
+    def health() -> dict:
+        b = state["bundle"]
+        return {"status": "ok", "chunks": len(b.chunks) if b else 0, "model": state["model"]}
+
+    @app.post("/search", response_model=SearchResponse)
+    def search(req: SearchRequest) -> SearchResponse:
+        hits = Retriever(state["bundle"], mode=req.mode).retrieve(req.query, k=req.k)
+        return SearchResponse(results=[_source(h) for h in hits])
+
+    @app.post("/ask", response_model=AskResponse)
+    def ask(req: AskRequest) -> AskResponse:
+        retriever = Retriever(state["bundle"], mode="hybrid")
+        try:
+            hits = retriever.retrieve(req.question, k=20 if req.rerank else req.k)
+            if req.rerank:
+                hits = rerank(req.question, hits, state["model"], completion_fn=completion_fn)[: req.k]
+            ans = answer_question(req.question, hits, state["model"], completion_fn=completion_fn)
