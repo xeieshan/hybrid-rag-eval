@@ -85,3 +85,11 @@ def create_app(
             if req.rerank:
                 hits = rerank(req.question, hits, state["model"], completion_fn=completion_fn)[: req.k]
             ans = answer_question(req.question, hits, state["model"], completion_fn=completion_fn)
+        except Exception as err:  # noqa: BLE001 - surface provider errors as 502
+            raise HTTPException(status_code=502, detail=f"LLM call failed: {err}") from err
+        return AskResponse(answer=ans.text, cited_peps=ans.cited_peps, sources=[_source(h) for h in hits])
+
+    return app
+
+
+app = create_app()
