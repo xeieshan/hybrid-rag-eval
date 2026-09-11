@@ -167,4 +167,4 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == "__main__":
     sys.exit(main())
 
-# Maintenance pass: 2026-09-11 11:04
+# Maintenance pass: 2026-09-11 14:37
