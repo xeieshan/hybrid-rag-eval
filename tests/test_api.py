@@ -19,3 +19,11 @@ def test_health_search_and_ask(bundle, fake_completion):
         assert body["sources"]
 
 
+def test_validation_errors(bundle, fake_completion):
+    with TestClient(create_app(bundle=bundle, completion_fn=fake_completion("x"))) as client:
+        assert client.post("/search", json={"query": ""}).status_code == 422
+        assert client.post("/search", json={"query": "x", "mode": "nope"}).status_code == 422
+
+
+def test_llm_failure_returns_502(bundle):
+    def boom(**_):
