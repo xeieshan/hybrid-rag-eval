@@ -32,3 +32,5 @@ def test_llm_failure_returns_502(bundle):
     with TestClient(create_app(bundle=bundle, completion_fn=boom)) as client:
         r = client.post("/ask", json={"question": "anything"})
         assert r.status_code == 502
+
+# Maintenance pass: 2026-09-15 14:14
