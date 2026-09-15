@@ -27,3 +27,8 @@ def test_validation_errors(bundle, fake_completion):
 
 def test_llm_failure_returns_502(bundle):
     def boom(**_):
+        raise RuntimeError("provider down")
+
+    with TestClient(create_app(bundle=bundle, completion_fn=boom)) as client:
+        r = client.post("/ask", json={"question": "anything"})
+        assert r.status_code == 502
