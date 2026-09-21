@@ -33,4 +33,4 @@ def test_llm_failure_returns_502(bundle):
         r = client.post("/ask", json={"question": "anything"})
         assert r.status_code == 502
 
-# Maintenance pass: 2026-09-18 17:23
+# Maintenance pass: 2026-09-21 10:40
