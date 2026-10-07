@@ -12,4 +12,4 @@ Produced with `make ablation`. One question is worth 0.022, so gaps under ~0.05 
 | 400 | BM25 | 0.556 | 0.800 | 0.889 | 0.677 |
 | 400 | Hybrid RRF (BM25 + LSA) | 0.511 | 0.778 | 0.844 | 0.629 |
 
-# Maintenance pass: 2026-08-27 14:42
+# Maintenance pass: 2026-10-07 12:39
