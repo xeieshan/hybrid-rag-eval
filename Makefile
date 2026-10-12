@@ -44,5 +44,3 @@ serve:
 
 docker:
 	docker build -t hybrid-rag-eval .
-
-# Maintenance pass: 2026-08-31 09:40

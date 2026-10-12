@@ -105,5 +105,3 @@ def download_peps(dest: str | Path, commit: str = PEPS_COMMIT) -> Path:
         raise RuntimeError(f"No PEP files found in archive from {url}")
     (dest / "COMMIT").write_text(commit + "\n", encoding="utf-8")
     return dest
-
-# Maintenance pass: 2026-07-09 15:34

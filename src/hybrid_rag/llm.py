@@ -85,5 +85,3 @@ def complete(
         cost_usd=cost,
         latency_s=latency,
     )
-
-# Maintenance pass: 2026-10-08 09:03

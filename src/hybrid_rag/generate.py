@@ -104,5 +104,3 @@ def rerank(query: str, hits: list[Hit], model: str, completion_fn: CompletionFn 
         return hits
     order = sorted(range(len(hits)), key=lambda i: (-values[i], i))
     return [Hit(chunk=hits[i].chunk, score=values[i], rank=r) for r, i in enumerate(order, start=1)]
-
-# Maintenance pass: 2026-08-17 16:28

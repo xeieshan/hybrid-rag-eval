@@ -13,3 +13,9 @@ RUN hybrid-rag download --dest /app/data/peps \
     && hybrid-rag build-index --corpus /app/data/peps --out /app/artifacts/index --embedder lsa:256
 
 ENV RAG_INDEX_DIR=/app/artifacts/index
+EXPOSE 8000
+
+RUN useradd --create-home appuser && chown -R appuser /app
+USER appuser
+
+CMD ["uvicorn", "hybrid_rag.api:app", "--host", "0.0.0.0", "--port", "8000"]

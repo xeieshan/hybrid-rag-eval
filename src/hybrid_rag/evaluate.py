@@ -165,5 +165,3 @@ def evaluate_answers(
         "total_cost_usd": round(meter.cost_usd, 4),
     }
     return {"summary": summary, "per_question": per_q}
-
-# Maintenance pass: 2026-09-11 16:54
